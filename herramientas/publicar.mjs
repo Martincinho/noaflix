@@ -31,8 +31,12 @@ async function cifrar(datos) {
   return out;
 }
 
-fs.rmSync(SALIDA, { recursive: true, force: true });
 fs.mkdirSync(SALIDA, { recursive: true });
+// Solo se vuelven a cifrar las fotos/vídeos que cambiaron (así cada actualización pesa poco)
+const RUTA_HUELLAS = path.join(HERR, "huellas.json");
+const huellasViejas = fs.existsSync(RUTA_HUELLAS) ? JSON.parse(fs.readFileSync(RUTA_HUELLAS, "utf8")) : {};
+const huellas = {};
+const huella = async datos => Buffer.from(await crypto.subtle.digest("SHA-256", datos)).toString("hex");
 
 // La página de la serie (con la carta, los textos…) → app.html.bin
 fs.writeFileSync(path.join(SALIDA, "app.html.bin"), await cifrar(fs.readFileSync(path.join(FUENTE, "index.html"))));
@@ -45,11 +49,18 @@ for (const carpeta of ["fotos", "videos"]) {
     if (path.basename(f).startsWith(".")) continue;
     const rel = path.relative(FUENTE, f);
     const destino = path.join(SALIDA, rel + ".bin");
+    const datos = fs.readFileSync(f);
+    huellas[rel] = await huella(datos);
+    if (huellasViejas[rel] === huellas[rel] && fs.existsSync(destino)) continue;
     fs.mkdirSync(path.dirname(destino), { recursive: true });
-    fs.writeFileSync(destino, await cifrar(fs.readFileSync(f)));
+    fs.writeFileSync(destino, await cifrar(datos));
     n++;
   }
 }
+
+// Borra lo cifrado de archivos que ya no existen
+for (const rel of Object.keys(huellasViejas)) if (!(rel in huellas)) fs.rmSync(path.join(SALIDA, rel + ".bin"), { force: true });
+fs.writeFileSync(RUTA_HUELLAS, JSON.stringify(huellas, null, 1));
 
 // Pantalla de inicio de sesión + service worker
 const b64 = u => Buffer.from(u).toString("base64");
@@ -61,4 +72,4 @@ fs.copyFileSync(path.join(HERR, "sw.js"), path.join(SALIDA, "sw.js"));
 fs.writeFileSync(path.join(SALIDA, ".nojekyll"), "");
 fs.writeFileSync(path.join(SALIDA, "robots.txt"), "User-agent: *\nDisallow: /\n");
 
-console.log(`Listo: ${n} archivos cifrados + página en ${path.relative(RAIZ, SALIDA)}/`);
+console.log(`Listo: página cifrada + ${n} fotos/vídeos nuevos o cambiados, en ${path.relative(RAIZ, SALIDA)}/`);
