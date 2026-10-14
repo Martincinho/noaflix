@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141414">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:title" content="Noaflix · Mi niña">
+<meta property="og:description" content="Nueva serie: Mi niña. Temporada 1 ya disponible.">
+<meta name="apple-mobile-web-app-title" content="Noaflix">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8E%80%3C/text%3E%3C/svg%3E">
+<title>Noaflix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: #000 radial-gradient(120% 80% at 50% 0%, #5c0c14 0%, #2a080b 45%, #0b0505 100%) no-repeat;
+    color: #fff; font-family: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh;
+  }
+  .logo { padding: calc(20px + env(safe-area-inset-top)) 22px 0; font-family: 'Bebas Neue', Impact, sans-serif; color: #e50914; font-size: 38px; line-height: 1; display: flex; }
+  .logo i { font-style: normal; display: inline-block; transform: scaleY(calc(1 + var(--k) * .07)); }
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 16px 60px; }
+  .caja { width: 100%; max-width: 420px; background: rgba(0,0,0,.72); border-radius: 6px; padding: 40px 28px 34px; }
+  h1 { font-size: 30px; font-weight: 700; margin-bottom: 10px; }
+  .sub { color: #b3b3b3; font-size: 15px; line-height: 1.5; margin-bottom: 24px; }
+  label { display: block; position: relative; }
+  input {
+    width: 100%; background: rgba(22,22,22,.85); border: 1px solid #5e5e5e; border-radius: 4px; color: #fff;
+    font-size: 16px; font-family: inherit; padding: 22px 16px 8px; outline: none;
+  }
+  input:focus { border-color: #fff; }
+  label span { position: absolute; left: 16px; top: 16px; color: #8c8c8c; font-size: 16px; transition: .15s; pointer-events: none; }
+  input:focus + span, input:not(:placeholder-shown) + span { top: 7px; font-size: 11px; }
+  .pista { color: #8c8c8c; font-size: 13px; margin: 10px 2px 0; }
+  .error { color: #e87c03; font-size: 14px; min-height: 20px; margin: 10px 2px 0; }
+  button { width: 100%; margin-top: 14px; background: #e50914; color: #fff; border: none; border-radius: 4px; padding: 13px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; }
+  button:disabled { opacity: .7; }
+  .cargando { display: none; place-items: center; position: fixed; inset: 0; background: #000; z-index: 5; }
+  .cargando.on { display: grid; }
+  .cargando span { width: 56px; height: 56px; border-radius: 50%; border: 4px solid rgba(229,9,20,.25); border-top-color: #e50914; animation: girar .8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .pie { text-align: center; color: #6d6d6d; font-size: 12px; padding: 0 16px calc(20px + env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body>
+  <div class="logo" aria-label="NOAFLIX"><i style="--k:3">N</i><i style="--k:2">O</i><i style="--k:1">A</i><i style="--k:0">F</i><i style="--k:1">L</i><i style="--k:2">I</i><i style="--k:3">X</i></div>
+  <main>
+    <form class="caja" id="form" autocomplete="off">
+      <h1>Inicia sesión</h1>
+      <p class="sub">Esta serie es privada. Solo una persona en el mundo conoce la contraseña.</p>
+      <label><input id="clave" type="text" inputmode="numeric" placeholder=" " autocapitalize="off" spellcheck="false"><span>Contraseña</span></label>
+      <p class="pista">Pista: el día que nos conocimos 🎤</p>
+      <p class="error" id="error"></p>
+      <button id="entrar" type="submit">Iniciar sesión</button>
+    </form>
+  </main>
+  <p class="pie">Noaflix · una serie original</p>
+  <div class="cargando" id="cargando"><span></span></div>
+
+<script>
+const CONFIG = {"sal":"1YY876iPKsM8b0ThWArlEQ==","iter":250000,"prueba":"1upaXBSkVtzyq/QbhxQ25jfwHJZ/0nOdyQ1vBbukd8I+gr8="};
+const $ = id => document.getElementById(id);
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+// Acepta la fecha escrita de muchas formas: 26042025, 26/04/2025, 26-4-25, "26 de abril de 2025"…
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function normalizar(t) {
+  let s = t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  MESES.forEach((m, i) => { s = s.replace(new RegExp(m.slice(0, 3) + "[a-z]*", "g"), " " + (i + 1) + " "); });
+  const g = s.match(/\d+/g) || [];
+  if (g.length === 1) return g[0];
+  if (g.length >= 3) {
+    let [d, m, a] = g;
+    if (a.length === 2) a = "20" + a;
+    return d.padStart(2, "0") + m.padStart(2, "0") + a;
+  }
+  return s.replace(/\s+/g, "");
+}
+
+async function derivar(texto) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(texto), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: b64(CONFIG.sal), iterations: CONFIG.iter, hash: "SHA-256" }, base, 256);
+  return bits; // ArrayBuffer de 32 bytes
+}
+async function comprobar(raw) {
+  try {
+    const k = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+    const d = b64(CONFIG.prueba);
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv: d.slice(0, 12) }, k, d.slice(12));
+    return true;
+  } catch { return false; }
+}
+
+async function swListo() {
+  const reg = await navigator.serviceWorker.register("sw.js");
+  await navigator.serviceWorker.ready;
+  if (!navigator.serviceWorker.controller) {
+    await new Promise(ok => { navigator.serviceWorker.addEventListener("controllerchange", ok, { once: true }); setTimeout(ok, 3000); });
+  }
+  return reg;
+}
+async function abrirSerie() {
+  const r = await fetch("app.html", { cache: "no-store" });
+  if (!r.ok) return false;
+  location.replace("app.html");
+  return true;
+}
+function enviarClave(raw) {
+  return new Promise(ok => {
+    const fin = e => { if (e.data && e.data.tipo === "lista") { navigator.serviceWorker.removeEventListener("message", fin); ok(); } };
+    navigator.serviceWorker.addEventListener("message", fin);
+    navigator.serviceWorker.controller.postMessage({ tipo: "clave", raw });
+    setTimeout(ok, 3000);
+  });
+}
+
+(async () => {
+  if (!("serviceWorker" in navigator) || !window.crypto || !crypto.subtle) {
+    $("error").textContent = "Abre este link en Safari o Chrome para poder ver la serie.";
+    $("entrar").disabled = true; return;
+  }
+  $("cargando").classList.add("on");
+  try {
+    await swListo();
+    if (await abrirSerie()) return; // ya había entrado antes en este móvil
+  } catch {}
+  $("cargando").classList.remove("on");
+  $("clave").focus();
+})();
+
+$("form").onsubmit = async e => {
+  e.preventDefault();
+  $("error").textContent = "";
+  $("entrar").disabled = true; $("entrar").textContent = "Comprobando…";
+  const raw = await derivar(normalizar($("clave").value));
+  if (!(await comprobar(raw))) {
+    $("error").textContent = "Contraseña incorrecta. Inténtalo de nuevo.";
+    $("entrar").disabled = false; $("entrar").textContent = "Iniciar sesión";
+    return;
+  }
+  $("cargando").classList.add("on");
+  try {
+    if (!navigator.serviceWorker.controller) await swListo();
+    await enviarClave(raw);
+    if (await abrirSerie()) return;
+  } catch {}
+  $("cargando").classList.remove("on");
+  $("error").textContent = "Algo falló al abrir la serie. Recarga la página e inténtalo otra vez.";
+  $("entrar").disabled = false; $("entrar").textContent = "Iniciar sesión";
+};
+</script>
+</body>
+</html>
