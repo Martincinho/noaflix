@@ -7,7 +7,8 @@ import { webcrypto as crypto } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-const RAIZ = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+import { fileURLToPath } from "node:url";
+const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FUENTE = path.join(RAIZ, "fuente");
 const SALIDA = path.join(RAIZ, "docs");
 const HERR = path.join(RAIZ, "herramientas");
